@@ -1,0 +1,183 @@
+openapi: 3.0.3
+info:
+  title: Monitoring Service API
+  description: |
+    A monitoring service for handling webhook alerts from external monitoring systems.
+    Currently supports Datadog alert webhooks.
+  version: 1.0.0
+  contact:
+    name: NDW Realtime Team
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /webhooks/alerts/datadog:
+    post:
+      summary: Receive Datadog alert webhook
+      description: |
+        Endpoint for receiving alert notifications from Datadog.
+        Processes incoming alerts and logs relevant information including
+        alert status, environment, team, and hostname.
+      operationId: handleDatadogAlert
+      tags:
+        - Webhooks
+      requestBody:
+        required: true
+        description: Datadog alert payload
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DatadogAlertRequest'
+            examples:
+              triggered:
+                summary: Triggered alert example
+                value:
+                  alertId: "12345678"
+                  alertTitle: "High CPU Usage Alert"
+                  alertTransition: "Triggered"
+                  alertQuery: "avg:system.cpu.user{*} > 80"
+                  alertMetric: "system.cpu.user"
+                  alertPriority: "P1"
+                  alertScope: "host:web-server-01"
+                  hostname: "web-server-01"
+                  tags: "env:production,service:api,team:platform"
+                  link: "https://app.datadoghq.com/monitors/12345678"
+                  date: "2024-01-15T10:30:00Z"
+                  orgId: "123456"
+                  orgName: "NDW"
+                  message: "CPU usage exceeded 80% threshold"
+                  team: "platform"
+              recovered:
+                summary: Recovered alert example
+                value:
+                  alertId: "12345678"
+                  alertTitle: "High CPU Usage Alert"
+                  alertTransition: "Recovered"
+                  date: "2024-01-15T10:45:00Z"
+                  team: "platform"
+      responses:
+        '204':
+          description: Alert received and processed successfully
+        '400':
+          description: Invalid request - validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                timestamp: "2024-01-15T10:30:00.000+00:00"
+                status: 400
+                error: "Bad Request"
+                message: "Validation failed"
+                path: "/webhooks/alerts/datadog"
+
+components:
+  schemas:
+    DatadogAlertRequest:
+      type: object
+      description: Datadog alert webhook payload
+      required:
+        - alertId
+        - alertTitle
+        - alertTransition
+        - date
+        - team
+      properties:
+        alertId:
+          type: string
+          description: Unique identifier for the alert
+          example: "12345678"
+        alertTitle:
+          type: string
+          description: Title of the alert
+          example: "High CPU Usage Alert"
+        alertTransition:
+          type: string
+          description: Alert state transition
+          enum:
+            - Triggered
+            - Warn
+            - Recovered
+            - No Data
+            - Re-Triggered
+          example: "Triggered"
+        alertQuery:
+          type: string
+          description: The query that triggered the alert
+          example: "avg:system.cpu.user{*} > 80"
+        alertMetric:
+          type: string
+          description: The metric being monitored
+          example: "system.cpu.user"
+        alertPriority:
+          type: string
+          description: Priority level of the alert
+          example: "P1"
+        alertScope:
+          type: string
+          description: Scope of the alert
+          example: "host:web-server-01"
+        hostname:
+          type: string
+          description: Host that triggered the alert
+          example: "web-server-01"
+        tags:
+          type: string
+          description: Comma-separated tags in key:value format
+          example: "env:production,service:api,team:platform"
+        link:
+          type: string
+          description: Link to the alert in Datadog
+          format: uri
+          example: "https://app.datadoghq.com/monitors/12345678"
+        date:
+          type: string
+          description: Timestamp of the alert
+          example: "2024-01-15T10:30:00Z"
+        orgId:
+          type: string
+          description: Datadog organization ID
+          example: "123456"
+        orgName:
+          type: string
+          description: Datadog organization name
+          example: "NDW"
+        message:
+          type: string
+          description: Alert message
+          example: "CPU usage exceeded 80% threshold"
+        team:
+          type: string
+          description: Team responsible for handling the alert
+          example: "platform"
+
+    ValidationError:
+      type: object
+      description: Spring Boot validation error response
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp of the error
+        status:
+          type: integer
+          description: HTTP status code
+          example: 400
+        error:
+          type: string
+          description: HTTP error message
+          example: "Bad Request"
+        message:
+          type: string
+          description: Detailed error message
+          example: "Validation failed"
+        path:
+          type: string
+          description: Request path that caused the error
+          example: "/webhooks/alerts/datadog"
+
+tags:
+  - name: Webhooks
+    description: Webhook endpoints for receiving external alerts
