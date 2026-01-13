@@ -11,11 +11,11 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.example</groupId>
+    <groupId>nu.ndw.realtime</groupId>
     <artifactId>monitoring</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>monitoring</name>
-    <description>Spring Boot Monitoring Application</description>
+    <description>NDW Realtime Monitoring Application</description>
 
     <properties>
         <java.version>21</java.version>

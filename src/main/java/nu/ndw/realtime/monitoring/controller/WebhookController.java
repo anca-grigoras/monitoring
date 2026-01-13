@@ -1,7 +1,7 @@
-package com.example.monitoring.controller;
+package nu.ndw.realtime.monitoring.controller;
 
-import com.example.monitoring.dto.DatadogAlertRequestDTO;
-import com.example.monitoring.service.AlertHandlerService;
+import nu.ndw.realtime.monitoring.dto.DatadogAlertRequestDTO;
+import nu.ndw.realtime.monitoring.service.AlertHandlerService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
