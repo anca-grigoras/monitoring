@@ -26,7 +26,7 @@ public class AlertHandlerServiceImpl implements AlertHandlerService {
                 status != null ? status.getLabel() : alert.alertTransition(),
                 alert.alertTitle(),
                 tagsMap.getOrDefault("environment", "unknown"),
-                tagsMap.getOrDefault("team", "unknown"),
+                alert.team(),
                 alert.hostname());
     }
 
