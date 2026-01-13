@@ -1,5 +1,6 @@
 package com.example.monitoring.dto;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -10,7 +11,8 @@ public enum DatadogAlertStatus {
     TRIGGERED("Triggered"),
     WARN("Warn"),
     RECOVERED("Recovered"),
-    NO_DATA("No Data");
+    NO_DATA("No Data"),
+    RENOTIFY("Re-Triggered");
 
     private final String label;
 
@@ -19,12 +21,13 @@ public enum DatadogAlertStatus {
         return label;
     }
 
-    public static DatadogAlertStatus fromTitle(String title) {
-        if (title == null) {
+    @JsonCreator
+    public static DatadogAlertStatus fromLabel(String label) {
+        if (label == null) {
             return null;
         }
         for (DatadogAlertStatus status : values()) {
-            if (title.contains("[" + status.label)) {
+            if (status.label.equalsIgnoreCase(label)) {
                 return status;
             }
         }
