@@ -2,11 +2,7 @@ package nu.ndw.realtime.monitoring.dto;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
-@Getter
-@RequiredArgsConstructor
 public enum DatadogAlertStatus {
     TRIGGERED("Triggered"),
     WARN("Warn"),
@@ -15,6 +11,10 @@ public enum DatadogAlertStatus {
     RENOTIFY("Re-Triggered");
 
     private final String label;
+
+    DatadogAlertStatus(String label) {
+        this.label = label;
+    }
 
     @JsonValue
     public String getLabel() {
