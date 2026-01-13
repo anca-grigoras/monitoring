@@ -1,4 +1,4 @@
-package com.example.monitoring.dto;
+package nu.ndw.realtime.monitoring.dto;
 
 import jakarta.validation.constraints.NotBlank;
 
