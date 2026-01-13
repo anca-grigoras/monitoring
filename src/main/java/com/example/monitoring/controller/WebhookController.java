@@ -1,7 +1,8 @@
 package com.example.monitoring.controller;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.example.monitoring.dto.DatadogAlertRequestDTO;
+import com.example.monitoring.service.AlertHandlerService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -12,11 +13,15 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/webhooks")
 public class WebhookController {
 
-    private static final Logger logger = LoggerFactory.getLogger(WebhookController.class);
+    private final AlertHandlerService alertHandlerService;
 
-    @PostMapping("/alerts")
-    public ResponseEntity<String> handleAlert(@RequestBody String payload) {
-        logger.info("Alert received: {}", payload);
-        return ResponseEntity.ok("Received");
+    public WebhookController(AlertHandlerService alertHandlerService) {
+        this.alertHandlerService = alertHandlerService;
+    }
+
+    @PostMapping("/alerts/datadog")
+    public ResponseEntity<Void> handleDatadogAlert(@Valid @RequestBody DatadogAlertRequestDTO dto) {
+        alertHandlerService.handleDatadogAlert(dto);
+        return ResponseEntity.noContent().build();
     }
 }
