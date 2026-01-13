@@ -16,5 +16,6 @@ public record DatadogAlertRequestDTO(
         @NotBlank String date,
         String orgId,
         String orgName,
-        String message) {
+        String message,
+        @NotBlank String team) {
 }
