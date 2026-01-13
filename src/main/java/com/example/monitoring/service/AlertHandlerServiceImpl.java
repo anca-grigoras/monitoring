@@ -6,6 +6,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 @Service
 public class AlertHandlerServiceImpl implements AlertHandlerService {
 
@@ -13,12 +18,29 @@ public class AlertHandlerServiceImpl implements AlertHandlerService {
 
     @Override
     public void handleDatadogAlert(DatadogAlertRequestDTO alert) {
-        DatadogAlertStatus status = DatadogAlertStatus.fromTitle(alert.title());
+        DatadogAlertStatus status = DatadogAlertStatus.fromLabel(alert.alertTransition());
+        Map<String, String> tagsMap = parseTags(alert.tags());
 
-        logger.info("Received Datadog alert: id={}, status={}, title={}, org={}",
-                alert.id(),
-                status != null ? status.getLabel() : "unknown",
-                alert.title(),
-                alert.org().name());
+        logger.info("Received Datadog alert: alertId={}, status={}, title={}, environment={}, team={}, hostname={}",
+                alert.alertId(),
+                status != null ? status.getLabel() : alert.alertTransition(),
+                alert.alertTitle(),
+                tagsMap.getOrDefault("environment", "unknown"),
+                tagsMap.getOrDefault("team", "unknown"),
+                alert.hostname());
+    }
+
+    private Map<String, String> parseTags(String tags) {
+        if (tags == null || tags.isBlank()) {
+            return Collections.emptyMap();
+        }
+        return Stream.of(tags.split(","))
+                .map(String::trim)
+                .filter(tag -> tag.contains(":"))
+                .collect(Collectors.toMap(
+                        tag -> tag.substring(0, tag.indexOf(':')),
+                        tag -> tag.substring(tag.indexOf(':') + 1),
+                        (existing, replacement) -> existing
+                ));
     }
 }
