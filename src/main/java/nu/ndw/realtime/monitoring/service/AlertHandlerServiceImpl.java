@@ -2,6 +2,8 @@ package nu.ndw.realtime.monitoring.service;
 
 import nu.ndw.realtime.monitoring.dto.DatadogAlertRequestDTO;
 import nu.ndw.realtime.monitoring.dto.DatadogAlertStatus;
+import nu.ndw.realtime.monitoring.dto.GrafanaAlert;
+import nu.ndw.realtime.monitoring.dto.GrafanaAlertRequestDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -28,6 +30,29 @@ public class AlertHandlerServiceImpl implements AlertHandlerService {
                 tagsMap.getOrDefault("environment", "unknown"),
                 alert.team(),
                 alert.hostname());
+    }
+
+    @Override
+    public void handleGrafanaAlert(GrafanaAlertRequestDTO alert) {
+        logger.info("Received Grafana alert: receiver={}, status={}, title={}, state={}, alertCount={}, orgId={}, message={}",
+                alert.receiver(),
+                alert.status(),
+                alert.title(),
+                alert.state(),
+                alert.alerts() != null ? alert.alerts().size() : 0,
+                alert.orgId(),
+                alert.message());
+
+        if (alert.alerts() != null) {
+            for (GrafanaAlert individualAlert : alert.alerts()) {
+                logger.info("  Alert detail: status={}, fingerprint={}, startsAt={}, labels={}, annotations={}",
+                        individualAlert.status(),
+                        individualAlert.fingerprint(),
+                        individualAlert.startsAt(),
+                        individualAlert.labels(),
+                        individualAlert.annotations());
+            }
+        }
     }
 
     private Map<String, String> parseTags(String tags) {

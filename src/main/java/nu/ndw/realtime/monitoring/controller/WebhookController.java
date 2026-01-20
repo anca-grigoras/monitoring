@@ -1,6 +1,7 @@
 package nu.ndw.realtime.monitoring.controller;
 
 import nu.ndw.realtime.monitoring.dto.DatadogAlertRequestDTO;
+import nu.ndw.realtime.monitoring.dto.GrafanaAlertRequestDTO;
 import nu.ndw.realtime.monitoring.service.AlertHandlerService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +23,12 @@ public class WebhookController {
     @PostMapping("/alerts/datadog")
     public ResponseEntity<Void> handleDatadogAlert(@Valid @RequestBody DatadogAlertRequestDTO dto) {
         alertHandlerService.handleDatadogAlert(dto);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/alerts/grafana")
+    public ResponseEntity<Void> handleGrafanaAlert(@RequestBody GrafanaAlertRequestDTO dto) {
+        alertHandlerService.handleGrafanaAlert(dto);
         return ResponseEntity.noContent().build();
     }
 }
