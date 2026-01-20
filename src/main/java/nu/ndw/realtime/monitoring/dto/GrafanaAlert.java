@@ -14,5 +14,6 @@ public record GrafanaAlert(
         String dashboardURL,
         String panelURL,
         Map<String, Object> values,
-        String valueString) {
+        String valueString,
+        Integer orgId) {
 }
