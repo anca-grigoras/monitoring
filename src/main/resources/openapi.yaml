@@ -3,7 +3,7 @@ info:
   title: Monitoring Service API
   description: |
     A monitoring service for handling webhook alerts from external monitoring systems.
-    Currently supports Datadog alert webhooks.
+    Supports Datadog and Grafana alert webhooks.
   version: 1.0.0
   contact:
     name: NDW Realtime Team
@@ -13,50 +13,104 @@ servers:
     description: Local development server
 
 paths:
-  /webhooks/alerts/datadog:
+  /internal/v1/teams/{teamId}/datadog-receiver:
     post:
       summary: Receive Datadog alert webhook
       description: |
         Endpoint for receiving alert notifications from Datadog.
-        Processes incoming alerts and logs relevant information including
-        alert status, environment, team, and hostname.
+        Processes incoming alerts and creates or updates incidents and alerts in the system.
+
+        **Datadog Webhook Body Template**
+
+        When configuring the webhook in Datadog, use the following JSON body template:
+
+        ```json
+        {
+          "alerts": [
+            {
+              "alertTransition": "$ALERT_TRANSITION",
+              "alertId": "$ALERT_ID",
+              "alertScope": "$ALERT_SCOPE",
+              "alertTitle": "$ALERT_TITLE",
+              "date": "$DATE",
+              "environment": "$ENV",
+              "service": "{{service.name}}"
+            }
+          ],
+          "commonLabels": {
+            "alertname": "$ALERT_TITLE",
+            "ruleId": "$ALERT_ID"
+          }
+        }
+        ```
+
+        Note: Most fields use Datadog webhook variables (`$VARIABLE_NAME`), but
+        `service` uses the Datadog notification template variable `{{service.name}}`
+        which resolves to the APM service name associated with the alert.
       operationId: handleDatadogAlert
       tags:
-        - Webhooks
+        - Datadog
+      parameters:
+        - name: teamId
+          in: path
+          required: true
+          description: UUID of the team that owns the receiver
+          schema:
+            type: string
+            format: uuid
+            example: "a33098a8-ed37-4af0-826a-6c0dbf39ebf3"
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
-        description: Datadog alert payload
+        description: Datadog alert payload (after template variable resolution)
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/DatadogAlertRequest'
             examples:
               triggered:
-                summary: Triggered alert example
+                summary: Triggered alert
                 value:
-                  alertId: "12345678"
-                  alertTitle: "High CPU Usage Alert"
-                  alertTransition: "Triggered"
-                  alertQuery: "avg:system.cpu.user{*} > 80"
-                  alertMetric: "system.cpu.user"
-                  alertPriority: "P1"
-                  alertScope: "host:web-server-01"
-                  hostname: "web-server-01"
-                  tags: "env:production,service:api,team:platform"
-                  link: "https://app.datadoghq.com/monitors/12345678"
-                  date: "2024-01-15T10:30:00Z"
-                  orgId: "123456"
-                  orgName: "NDW"
-                  message: "CPU usage exceeded 80% threshold"
-                  team: "platform"
+                  alerts:
+                    - alertTransition: "Triggered"
+                      alertId: "12345678"
+                      alertScope: "host:web-server-01"
+                      alertTitle: "High CPU Usage Alert"
+                      date: 1769433745000
+                      environment: "prod"
+                      service: "api-gateway"
+                  commonLabels:
+                    alertname: "High CPU Usage Alert"
+                    ruleId: "12345678"
+              noData:
+                summary: No Data alert
+                value:
+                  alerts:
+                    - alertTransition: "No Data"
+                      alertId: "d8e9d4934258fbc4"
+                      alertScope: ""
+                      alertTitle: "[TEST] NCIS-CN: FCD data interrupted"
+                      date: 1769433745000
+                      environment: "prod"
+                      service: "FCD CN receiver"
+                  commonLabels:
+                    alertname: "[TEST] NCIS-CN: FCD data interrupted"
+                    ruleId: "d8e9d4934258fbc4"
               recovered:
-                summary: Recovered alert example
+                summary: Recovered alert
                 value:
-                  alertId: "12345678"
-                  alertTitle: "High CPU Usage Alert"
-                  alertTransition: "Recovered"
-                  date: "2024-01-15T10:45:00Z"
-                  team: "platform"
+                  alerts:
+                    - alertTransition: "Recovered"
+                      alertId: "d8e9d4934258fbc4"
+                      alertScope: ""
+                      alertTitle: "[TEST] NCIS-CN: FCD data interrupted"
+                      date: 1769433745000
+                      environment: "prod"
+                      service: "FCD CN receiver"
+                  commonLabels:
+                    alertname: "[TEST] NCIS-CN: FCD data interrupted"
+                    ruleId: "d8e9d4934258fbc4"
       responses:
         '204':
           description: Alert received and processed successfully
@@ -65,37 +119,93 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ValidationError'
+                $ref: '#/components/schemas/ProblemDetail'
               example:
-                timestamp: "2024-01-15T10:30:00.000+00:00"
+                type: "about:blank"
+                title: "Bad Request"
                 status: 400
-                error: "Bad Request"
-                message: "Validation failed"
-                path: "/webhooks/alerts/datadog"
+                detail: "Invalid request content."
+                instance: "/internal/v1/teams/a33098a8-ed37-4af0-826a-6c0dbf39ebf3/datadog-receiver"
+        '401':
+          description: Unauthorized - invalid or missing bearer token
+        '404':
+          description: Service not found for the alert's service name
+
+  /internal/v1/teams/{teamId}/grafana-receiver:
+    post:
+      summary: Receive Grafana alert webhook
+      description: |
+        Endpoint for receiving alert notifications from Grafana.
+        Processes incoming alerts and creates or updates incidents and alerts in the system.
+      operationId: handleGrafanaAlert
+      tags:
+        - Grafana
+      parameters:
+        - name: teamId
+          in: path
+          required: true
+          description: UUID of the team that owns the receiver
+          schema:
+            type: string
+            format: uuid
+            example: "a33098a8-ed37-4af0-826a-6c0dbf39ebf3"
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        description: Grafana alert payload
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GrafanaAlertRequest'
+      responses:
+        '204':
+          description: Alert received and processed successfully
+        '400':
+          description: Invalid request - validation error
+        '401':
+          description: Unauthorized - invalid or missing bearer token
+        '404':
+          description: Service not found for the alert's service name
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Team-specific bearer token obtained from the token endpoint
+
   schemas:
     DatadogAlertRequest:
       type: object
-      description: Datadog alert webhook payload
+      description: Datadog alert webhook payload with nested alerts and common labels
       required:
+        - alerts
+      properties:
+        alerts:
+          type: array
+          description: List of alert entries (must contain at least one)
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/DatadogAlert'
+        commonLabels:
+          $ref: '#/components/schemas/DatadogCommonLabels'
+
+    DatadogAlert:
+      type: object
+      description: Individual Datadog alert entry
+      required:
+        - alertTransition
         - alertId
         - alertTitle
-        - alertTransition
         - date
-        - team
+        - environment
+        - service
       properties:
-        alertId:
-          type: string
-          description: Unique identifier for the alert
-          example: "12345678"
-        alertTitle:
-          type: string
-          description: Title of the alert
-          example: "High CPU Usage Alert"
         alertTransition:
           type: string
-          description: Alert state transition
+          description: |
+            Alert state transition. Maps from Datadog webhook variable `$ALERT_TRANSITION`.
           enum:
             - Triggered
             - Warn
@@ -103,81 +213,88 @@ components:
             - No Data
             - Re-Triggered
           example: "Triggered"
-        alertQuery:
+        alertId:
           type: string
-          description: The query that triggered the alert
-          example: "avg:system.cpu.user{*} > 80"
-        alertMetric:
-          type: string
-          description: The metric being monitored
-          example: "system.cpu.user"
-        alertPriority:
-          type: string
-          description: Priority level of the alert
-          example: "P1"
+          description: |
+            Unique identifier for the alert monitor. Maps from Datadog webhook variable `$ALERT_ID`.
+          example: "d8e9d4934258fbc4"
         alertScope:
           type: string
-          description: Scope of the alert
+          description: |
+            Scope of the alert. Maps from Datadog webhook variable `$ALERT_SCOPE`.
+            Used together with alertId to compute the alert fingerprint.
+            Can be empty string when no scope is defined.
           example: "host:web-server-01"
-        hostname:
+        alertTitle:
           type: string
-          description: Host that triggered the alert
-          example: "web-server-01"
-        tags:
-          type: string
-          description: Comma-separated tags in key:value format
-          example: "env:production,service:api,team:platform"
-        link:
-          type: string
-          description: Link to the alert in Datadog
-          format: uri
-          example: "https://app.datadoghq.com/monitors/12345678"
+          description: |
+            Title of the alert. Maps from Datadog webhook variable `$ALERT_TITLE`.
+          example: "[TEST] NCIS-CN: FCD data interrupted"
         date:
+          type: integer
+          format: int64
+          description: |
+            Timestamp of the alert in epoch milliseconds. Maps from Datadog webhook variable `$DATE`.
+          example: 1769433745000
+        environment:
           type: string
-          description: Timestamp of the alert
-          example: "2024-01-15T10:30:00Z"
-        orgId:
+          description: |
+            Environment where the alert originated. Maps from Datadog webhook variable `$ENV`.
+          example: "prod"
+        service:
           type: string
-          description: Datadog organization ID
-          example: "123456"
-        orgName:
-          type: string
-          description: Datadog organization name
-          example: "NDW"
-        message:
-          type: string
-          description: Alert message
-          example: "CPU usage exceeded 80% threshold"
-        team:
-          type: string
-          description: Team responsible for handling the alert
-          example: "platform"
+          description: |
+            APM service name associated with the alert. Maps from Datadog notification
+            template variable `{{service.name}}` (not a standard `$` webhook variable).
+          example: "FCD CN receiver"
 
-    ValidationError:
+    DatadogCommonLabels:
       type: object
-      description: Spring Boot validation error response
+      description: Common labels shared across all alerts in the payload
+      required:
+        - alertname
+        - ruleId
       properties:
-        timestamp:
+        alertname:
           type: string
-          format: date-time
-          description: Timestamp of the error
+          description: Display name of the alert rule
+          example: "[TEST] NCIS-CN: FCD data interrupted"
+        ruleId:
+          type: string
+          description: Identifier of the alert rule
+          example: "d8e9d4934258fbc4"
+
+    GrafanaAlertRequest:
+      type: object
+      description: Grafana alert webhook payload (schema to be defined)
+
+    ProblemDetail:
+      type: object
+      description: RFC 7807 Problem Details response
+      properties:
+        type:
+          type: string
+          description: URI reference identifying the problem type
+          example: "about:blank"
+        title:
+          type: string
+          description: Short human-readable summary of the problem
+          example: "Bad Request"
         status:
           type: integer
           description: HTTP status code
           example: 400
-        error:
+        detail:
           type: string
-          description: HTTP error message
-          example: "Bad Request"
-        message:
+          description: Human-readable explanation specific to this occurrence
+          example: "Invalid request content."
+        instance:
           type: string
-          description: Detailed error message
-          example: "Validation failed"
-        path:
-          type: string
-          description: Request path that caused the error
-          example: "/webhooks/alerts/datadog"
+          description: URI reference identifying the specific occurrence
+          example: "/internal/v1/teams/a33098a8-ed37-4af0-826a-6c0dbf39ebf3/datadog-receiver"
 
 tags:
-  - name: Webhooks
-    description: Webhook endpoints for receiving external alerts
+  - name: Datadog
+    description: Datadog webhook receiver endpoints
+  - name: Grafana
+    description: Grafana webhook receiver endpoints
