@@ -8,10 +8,10 @@ import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.List;
 
-public record GrafanaAlertRequestDTO(@Valid @NotEmpty List<Alert> alerts, @Valid CommonLabels commonLabels) {
+public record SignozAlertRequestDTO(@Valid @NotEmpty List<Alert> alerts, @Valid CommonLabels commonLabels) {
 
     public record Alert(
-            @NotNull GrafanaAlertStatus status,
+            @NotNull SignozAlertStatus status,
             @NotBlank String fingerprint,
             @Valid @NotNull Labels labels,
             @Valid @NotNull Annotations annotations,
