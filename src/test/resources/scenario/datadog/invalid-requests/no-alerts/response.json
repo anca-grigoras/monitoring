@@ -1,0 +1,7 @@
+{
+  "type": "about:blank",
+  "title": "Bad Request",
+  "status": 400,
+  "detail": "Invalid request content.",
+  "instance": "/internal/v1/teams/a33098a8-ed37-4af0-826a-6c0dbf39ebf3/datadog-receiver"
+}
