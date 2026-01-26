@@ -1,46 +1,32 @@
 package nu.ndw.realtime.monitoring.service;
 
-import nu.ndw.realtime.monitoring.dto.DatadogAlertRequestDTO;
-import nu.ndw.realtime.monitoring.dto.DatadogAlertStatus;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.List;
+import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
+import nu.ndw.realtime.monitoring.model.Alert;
+import nu.ndw.realtime.monitoring.model.Metadata;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 @Service
+@Slf4j
 public class AlertHandlerServiceImpl implements AlertHandlerService {
 
-    private static final Logger logger = LoggerFactory.getLogger(AlertHandlerServiceImpl.class);
-
     @Override
-    public void handleDatadogAlert(DatadogAlertRequestDTO alert) {
-        DatadogAlertStatus status = DatadogAlertStatus.fromLabel(alert.alertTransition());
-        Map<String, String> tagsMap = parseTags(alert.tags());
+    public void handleAlerts(UUID teamId, List<Alert> alerts, Metadata metadata) {
+        log.info(
+                "Received alert '{}' with id '{}' and '{}' number of alerts for team '{}'",
+                metadata.alertName(),
+                metadata.ruleId(),
+                alerts.size(),
+                teamId);
 
-        logger.info("Received Datadog alert: alertId={}, status={}, title={}, environment={}, team={}, hostname={}",
-                alert.alertId(),
-                status != null ? status.getLabel() : alert.alertTransition(),
-                alert.alertTitle(),
-                tagsMap.getOrDefault("environment", "unknown"),
-                alert.team(),
-                alert.hostname());
-    }
-
-    private Map<String, String> parseTags(String tags) {
-        if (tags == null || tags.isBlank()) {
-            return Collections.emptyMap();
+        for (var alert : alerts) {
+            log.info(
+                    "Handling alert for service '{}' on environment '{}' with status '{}'",
+                    alert.serviceId(),
+                    alert.environment(),
+                    alert.status());
         }
-        return Stream.of(tags.split(","))
-                .map(String::trim)
-                .filter(tag -> tag.contains(":"))
-                .collect(Collectors.toMap(
-                        tag -> tag.substring(0, tag.indexOf(':')),
-                        tag -> tag.substring(tag.indexOf(':') + 1),
-                        (existing, replacement) -> existing
-                ));
+        log.info("Finished handling alerts");
     }
 }
