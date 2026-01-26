@@ -1,7 +1,6 @@
 package nu.ndw.realtime.monitoring.controller;
 
 import jakarta.validation.Valid;
-import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import nu.ndw.realtime.monitoring.dto.DatadogAlertRequestDTO;
@@ -26,7 +25,7 @@ public class DatadogReceiverController {
     public ResponseEntity<Void> postAlert(
             @PathVariable UUID teamId, @Valid @RequestBody DatadogAlertRequestDTO dto) {
         alertHandlerService.handleAlerts(
-                teamId, List.of(alertMapper.map(dto)), alertMapper.mapMetadata(dto));
+                teamId, alertMapper.map(dto.alerts()), alertMapper.mapMetadata(dto.commonLabels()));
         return ResponseEntity.noContent().build();
     }
 }
