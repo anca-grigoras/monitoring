@@ -16,7 +16,7 @@ public record DatadogAlertRequestDTO(@Valid @NotEmpty List<Alert> alerts, @Valid
             @NotBlank String alertTitle,
             @NotNull Long date,
             @NotBlank String environment,
-            @NotBlank String service) {}
+            @NotBlank String tags) {}
 
     public record CommonLabels(@NotBlank @JsonProperty("alertname") String alertName, @NotBlank String ruleId) {}
 }

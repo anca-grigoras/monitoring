@@ -7,7 +7,7 @@
       "alertTitle": "[TEST] NCIS-CN: FCD data interrupted",
       "date": 1769433745000,
       "environment": "prod",
-      "service": "Unknown service"
+      "tags": "fd,monitor,ncis-cn,priority:p1,service:Unknown service,team:dev"
     }
   ],
   "commonLabels": {

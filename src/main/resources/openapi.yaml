@@ -34,7 +34,7 @@ paths:
               "alertTitle": "$ALERT_TITLE",
               "date": "$DATE",
               "environment": "$ENV",
-              "service": "{{service.name}}"
+              "tags": "$TAGS"
             }
           ],
           "commonLabels": {
@@ -44,9 +44,8 @@ paths:
         }
         ```
 
-        Note: Most fields use Datadog webhook variables (`$VARIABLE_NAME`), but
-        `service` uses the Datadog notification template variable `{{service.name}}`
-        which resolves to the APM service name associated with the alert.
+        All fields use standard Datadog webhook variables (`$VARIABLE_NAME`).
+        The service name is extracted server-side from the `service:` tag in `$TAGS`.
       operationId: handleDatadogAlert
       tags:
         - Datadog
@@ -79,7 +78,7 @@ paths:
                       alertTitle: "High CPU Usage Alert"
                       date: 1769433745000
                       environment: "prod"
-                      service: "api-gateway"
+                      tags: "fd,monitor,priority:p1,service:api-gateway,team:dev"
                   commonLabels:
                     alertname: "High CPU Usage Alert"
                     ruleId: "12345678"
@@ -93,7 +92,7 @@ paths:
                       alertTitle: "[TEST] NCIS-CN: FCD data interrupted"
                       date: 1769433745000
                       environment: "prod"
-                      service: "FCD CN receiver"
+                      tags: "fd,monitor,ncis-cn,priority:p1,service:FCD CN receiver,team:dev"
                   commonLabels:
                     alertname: "[TEST] NCIS-CN: FCD data interrupted"
                     ruleId: "d8e9d4934258fbc4"
@@ -107,7 +106,7 @@ paths:
                       alertTitle: "[TEST] NCIS-CN: FCD data interrupted"
                       date: 1769433745000
                       environment: "prod"
-                      service: "FCD CN receiver"
+                      tags: "fd,monitor,ncis-cn,priority:p1,service:FCD CN receiver,team:dev"
                   commonLabels:
                     alertname: "[TEST] NCIS-CN: FCD data interrupted"
                     ruleId: "d8e9d4934258fbc4"
@@ -200,7 +199,7 @@ components:
         - alertTitle
         - date
         - environment
-        - service
+        - tags
       properties:
         alertTransition:
           type: string
@@ -241,12 +240,12 @@ components:
           description: |
             Environment where the alert originated. Maps from Datadog webhook variable `$ENV`.
           example: "prod"
-        service:
+        tags:
           type: string
           description: |
-            APM service name associated with the alert. Maps from Datadog notification
-            template variable `{{service.name}}` (not a standard `$` webhook variable).
-          example: "FCD CN receiver"
+            Comma-separated tags from Datadog. Maps from webhook variable `$TAGS`.
+            The service name is extracted server-side from the `service:` tag.
+          example: "fd,monitor,ncis-cn,priority:p1,service:FCD CN receiver,team:dev"
 
     DatadogCommonLabels:
       type: object
