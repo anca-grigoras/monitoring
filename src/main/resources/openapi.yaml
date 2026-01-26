@@ -136,6 +136,23 @@ paths:
       description: |
         Endpoint for receiving alert notifications from Grafana.
         Processes incoming alerts and creates or updates incidents and alerts in the system.
+
+        This endpoint receives the native Grafana Alerting webhook payload. The payload
+        is sent automatically by Grafana when a contact point is configured with a
+        webhook notification channel.
+
+        **Required Grafana alert rule labels:**
+        - `alertname` — always present (standard Grafana label), used as alert ID
+        - `service` — must be added as a custom label on the alert rule
+
+        **Optional labels:**
+        - `environment` — custom label on the alert rule
+
+        **Annotations:**
+        - `summary` — used as the alert description
+
+        Additional fields sent by Grafana (e.g., `groupLabels`, `externalURL`, `version`,
+        `groupKey`, `title`, `state`, `message`) are ignored.
       operationId: handleGrafanaAlert
       tags:
         - Grafana
@@ -152,16 +169,71 @@ paths:
         - bearerAuth: []
       requestBody:
         required: true
-        description: Grafana alert payload
+        description: Grafana alert webhook payload (native format)
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/GrafanaAlertRequest'
+            examples:
+              firing:
+                summary: Firing alert
+                value:
+                  alerts:
+                    - status: "firing"
+                      fingerprint: "326ea703b01f6100"
+                      labels:
+                        alertname: "TestAlert"
+                        grafana_folder: "Test Folder"
+                        instance: "Grafana"
+                        service: "my-service"
+                        environment: "prod"
+                      annotations:
+                        summary: "Notification test"
+                      startsAt: "2026-01-26T19:29:52.490787568Z"
+                      endsAt: "0001-01-01T00:00:00Z"
+                  commonLabels:
+                    alertname: "TestAlert"
+                    grafana_folder: "Test Folder"
+                    instance: "Grafana"
+                    service: "my-service"
+                    environment: "prod"
+              resolved:
+                summary: Resolved alert
+                value:
+                  alerts:
+                    - status: "resolved"
+                      fingerprint: "326ea703b01f6100"
+                      labels:
+                        alertname: "TestAlert"
+                        grafana_folder: "Test Folder"
+                        instance: "Grafana"
+                        service: "my-service"
+                        environment: "prod"
+                      annotations:
+                        summary: "Notification test"
+                      startsAt: "2026-01-26T19:29:52.490787568Z"
+                      endsAt: "2026-01-26T19:35:00.000000000Z"
+                  commonLabels:
+                    alertname: "TestAlert"
+                    grafana_folder: "Test Folder"
+                    instance: "Grafana"
+                    service: "my-service"
+                    environment: "prod"
       responses:
         '204':
           description: Alert received and processed successfully
         '400':
           description: Invalid request - validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+              example:
+                type: "about:blank"
+                title: "Bad Request"
+                status: 400
+                detail: "Invalid request content."
+                instance: "/internal/v1/teams/a33098a8-ed37-4af0-826a-6c0dbf39ebf3/grafana-receiver"
         '401':
           description: Unauthorized - invalid or missing bearer token
         '404':
@@ -265,7 +337,83 @@ components:
 
     GrafanaAlertRequest:
       type: object
-      description: Grafana alert webhook payload (schema to be defined)
+      description: |
+        Grafana Alerting webhook payload. This is the native format sent by Grafana
+        when a contact point is configured with a webhook notification channel.
+        Only the fields used by the monitoring service are documented here.
+      required:
+        - alerts
+      properties:
+        alerts:
+          type: array
+          description: List of alert instances (must contain at least one)
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/GrafanaAlert'
+        commonLabels:
+          type: object
+          description: Labels common to all alerts in the notification group
+          additionalProperties:
+            type: string
+          example:
+            alertname: "TestAlert"
+            grafana_folder: "Test Folder"
+            instance: "Grafana"
+
+    GrafanaAlert:
+      type: object
+      description: Individual Grafana alert instance
+      required:
+        - status
+        - fingerprint
+        - labels
+        - startsAt
+      properties:
+        status:
+          type: string
+          description: Current alert state
+          enum:
+            - firing
+            - resolved
+          example: "firing"
+        fingerprint:
+          type: string
+          description: Unique hash identifying this alert instance (based on label set)
+          example: "326ea703b01f6100"
+        labels:
+          type: object
+          description: |
+            Labels attached to the alert rule. Must include `alertname` (standard Grafana label)
+            and `service` (custom label). Optionally includes `environment`.
+          additionalProperties:
+            type: string
+          example:
+            alertname: "TestAlert"
+            grafana_folder: "Test Folder"
+            instance: "Grafana"
+            service: "my-service"
+            environment: "prod"
+        annotations:
+          type: object
+          description: |
+            Annotations attached to the alert rule. The `summary` annotation is used
+            as the alert description.
+          additionalProperties:
+            type: string
+          example:
+            summary: "Notification test"
+        startsAt:
+          type: string
+          format: date-time
+          description: Time when the alert started firing
+          example: "2026-01-26T19:29:52.490787568Z"
+        endsAt:
+          type: string
+          format: date-time
+          description: |
+            Time when the alert ended. Grafana sends `0001-01-01T00:00:00Z` for
+            ongoing alerts, which is converted to null server-side.
+          example: "0001-01-01T00:00:00Z"
 
     ProblemDetail:
       type: object
