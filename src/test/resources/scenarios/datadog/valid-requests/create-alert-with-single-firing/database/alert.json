@@ -1,7 +1,0 @@
-{
-  "fingerprintId": "232364-service:ncis-ci-opc-fcd-194",
-  "alertId": "232364",
-  "description": "[TEST] NCIS-CN: FCD data interrupted on service:ncis-ci-opc-fcd-194",
-  "startTime": "2026-01-26T13:22:25Z",
-  "endTime": null
-}

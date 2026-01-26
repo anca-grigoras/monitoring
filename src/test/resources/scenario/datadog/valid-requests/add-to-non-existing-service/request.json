@@ -1,0 +1,17 @@
+{
+  "alerts": [
+    {
+      "alertTransition": "No Data",
+      "alertId": "d8e9d4934258fbc4",
+      "alertScope": "",
+      "alertTitle": "[TEST] NCIS-CN: FCD data interrupted",
+      "date": 1769433745000,
+      "environment": "prod",
+      "service": "Unknown service"
+    }
+  ],
+  "commonLabels": {
+    "alertname": "[TEST] NCIS-CN: FCD data interrupted",
+    "ruleId": "d8e9d4934258fbc4"
+  }
+}

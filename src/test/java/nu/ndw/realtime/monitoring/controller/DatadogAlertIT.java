@@ -1,5 +1,6 @@
 package nu.ndw.realtime.monitoring.controller;
 
+import static nu.ndw.realtime.monitoring.util.TestFixtures.getResourceAsString;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
@@ -8,8 +9,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import java.util.Map;
 import java.util.stream.Stream;
 import nu.ndw.realtime.monitoring.dto.TeamTokenResponseDTO;
 import org.junit.jupiter.api.BeforeEach;
@@ -247,24 +246,5 @@ class DatadogAlertIT extends BaseIT {
                 fileToJsonMap(SCENARIO_DATABASE_TABLE.formatted(scenario, "incident")),
                 "id",
                 "service_id");
-    }
-
-    private void compareJsonMaps(Map<String, Object> actual, Map<String, Object> expected, String... ignoredFields) {
-        assertThat(actual)
-                .usingRecursiveComparison()
-                .ignoringFields(ignoredFields)
-                .isEqualTo(expected);
-    }
-
-    private Map<String, Object> objectToJsonMap(Object object) {
-        return objectMapper.convertValue(object, new TypeReference<>() {});
-    }
-
-    private Map<String, Object> fileToJsonMap(String filePath) {
-        return stringToJsonMap(getResourceAsString(filePath));
-    }
-
-    private Map<String, Object> stringToJsonMap(String jsonString) {
-        return objectMapper.readValue(jsonString, new TypeReference<>() {});
     }
 }
