@@ -46,7 +46,5 @@ public interface GrafanaAlertMapper {
         };
     }
 
-    @Mapping(target = "alertName", source = "commonLabels.alertname")
-    @Mapping(target = "ruleId", source = "commonLabels.ruleId")
     Metadata mapMetadata(GrafanaAlertRequestDTO.CommonLabels commonLabels);
 }

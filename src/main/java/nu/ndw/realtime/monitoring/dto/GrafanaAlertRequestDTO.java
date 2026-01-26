@@ -1,6 +1,6 @@
 package nu.ndw.realtime.monitoring.dto;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -8,34 +8,19 @@ import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.List;
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-public record GrafanaAlertRequestDTO(
-        @NotEmpty @Valid List<Alert> alerts,
-        @Valid CommonLabels commonLabels) {
+public record GrafanaAlertRequestDTO(@Valid @NotEmpty List<Alert> alerts, @Valid CommonLabels commonLabels) {
 
-    @JsonIgnoreProperties(ignoreUnknown = true)
     public record Alert(
             @NotNull GrafanaAlertStatus status,
-            @Valid Labels labels,
-            @Valid Annotations annotations,
-            Instant startsAt,
-            Instant endsAt,
-            @NotBlank String fingerprint) {}
+            @NotBlank String fingerprint,
+            @Valid @NotNull Labels labels,
+            @Valid @NotNull Annotations annotations,
+            @NotNull Instant startsAt,
+            Instant endsAt) {}
 
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public record Labels(
-            String alertname,
-            String environment,
-            String service,
-            String ruleId) {}
+    public record CommonLabels(@NotBlank @JsonProperty("alertname") String alertName, @NotBlank String ruleId) {}
 
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public record Annotations(
-            String description,
-            String summary) {}
+    public record Labels(@NotBlank String environment, @NotBlank String ruleId, @NotBlank String service) {}
 
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public record CommonLabels(
-            String alertname,
-            String ruleId) {}
+    public record Annotations(@NotBlank String description) {}
 }
