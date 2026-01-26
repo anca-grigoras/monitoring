@@ -17,6 +17,22 @@ This application provides webhook endpoints to receive and process alerts from m
 mvn clean install
 ```
 
+## Code Formatting
+
+This project uses [Spotless](https://github.com/diffplug/spotless/tree/main/plugin-maven) with Google Java Format (AOSP style) to enforce consistent code formatting.
+
+**Check formatting** (fails if code is not formatted):
+
+```bash
+mvn spotless:check
+```
+
+**Auto-fix formatting**:
+
+```bash
+mvn spotless:apply
+```
+
 ## Running
 
 ```bash
