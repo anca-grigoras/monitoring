@@ -14,28 +14,34 @@ import org.mapstruct.Named;
 @Mapper(componentModel = "spring")
 public interface DatadogAlertMapper {
 
-    Instant DATADOG_DEFAULT_ALERT_END_TIME = Instant.parse("0001-01-01T00:00:00Z");
-
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "incidentId", ignore = true)
-    @Mapping(target = "status", source = "alert.status", qualifiedByName = "datadogStatusMapper")
-    @Mapping(target = "fingerprintId", source = "alert.fingerprint")
-    @Mapping(target = "environment", source = "alert.labels.environment")
-    @Mapping(target = "serviceId", source = "alert.labels.service")
-    @Mapping(target = "alertId", source = "alert.labels.ruleId")
-    @Mapping(target = "description", source = "alert.annotations.description")
-    @Mapping(target = "startTime", source = "alert.startsAt")
-    @Mapping(target = "endTime", source = "alert.endsAt", qualifiedByName = "validateDatadogEndTime")
+    @Mapping(target = "status", source = "alert.alertTransition", qualifiedByName = "datadogStatusMapper")
+    @Mapping(target = "fingerprintId", source = "alert", qualifiedByName = "mapFingerprint")
+    @Mapping(target = "environment", source = "alert.environment")
+    @Mapping(target = "serviceId", source = "alert.service")
+    @Mapping(target = "alertId", source = "alert.alertId")
+    @Mapping(target = "description", source = "alert.alertTitle")
+    @Mapping(target = "startTime", source = "alert.date", qualifiedByName = "epochMillisToInstant")
+    @Mapping(target = "endTime", ignore = true)
     Alert map(DatadogAlertRequestDTO.Alert alert);
 
     List<Alert> map(List<DatadogAlertRequestDTO.Alert> alerts);
 
-    @Named("validateDatadogEndTime")
-    default Instant validateDatadogEndTime(Instant alertEndTime) {
-        if (DATADOG_DEFAULT_ALERT_END_TIME.equals(alertEndTime)) {
+    @Named("epochMillisToInstant")
+    default Instant epochMillisToInstant(Long epochMillis) {
+        if (epochMillis == null) {
             return null;
         }
-        return alertEndTime;
+        return Instant.ofEpochMilli(epochMillis);
+    }
+
+    @Named("mapFingerprint")
+    default String mapFingerprint(DatadogAlertRequestDTO.Alert alert) {
+        if (alert.alertScope() != null && !alert.alertScope().isBlank()) {
+            return alert.alertId() + "-" + alert.alertScope();
+        }
+        return alert.alertId();
     }
 
     @Named("datadogStatusMapper")
