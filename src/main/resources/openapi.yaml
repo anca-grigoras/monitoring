@@ -136,6 +136,31 @@ paths:
       description: |
         Endpoint for receiving alert notifications from Grafana.
         Processes incoming alerts and creates or updates incidents and alerts in the system.
+
+        This endpoint expects a custom payload produced by a Grafana webhook contact point
+        configured with a Custom Payload template (requires Grafana 12+).
+
+        **Grafana Webhook Custom Payload Template**
+
+        Configure the webhook contact point with the following Custom Payload template:
+
+        ```
+        {{ $alerts := coll.Slice }}
+        {{ range .Alerts }}
+        {{ $alerts = coll.Append (coll.Dict "status" .Status "fingerprint" .Fingerprint "alertname" (index .Labels "alertname") "service" (index .Labels "service_name") "environment" $.Vars.environment "description" (index .Annotations "summary") "startsAt" .StartsAt "endsAt" .EndsAt) $alerts }}
+        {{ end }}
+        {{ coll.Dict "alerts" $alerts "commonLabels" (coll.Dict "alertname" (index .CommonLabels "alertname") "ruleId" (index .CommonLabels "alertname")) | data.ToJSON }}
+        ```
+
+        **Vars** (configured per Grafana instance):
+        - `environment` — e.g., `prod` for production, `staging` for staging
+
+        **Required Grafana alert rule labels:**
+        - `alertname` — always present (standard Grafana label), used as alert ID and rule ID
+        - `service_name` — must be added as a custom label on the alert rule
+
+        **Optional annotations:**
+        - `summary` — used as the alert description
       operationId: handleGrafanaAlert
       tags:
         - Grafana
@@ -152,16 +177,57 @@ paths:
         - bearerAuth: []
       requestBody:
         required: true
-        description: Grafana alert payload
+        description: Grafana alert payload (after custom payload template rendering)
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/GrafanaAlertRequest'
+            examples:
+              firing:
+                summary: Firing alert
+                value:
+                  alerts:
+                    - status: "firing"
+                      fingerprint: "326ea703b01f6100"
+                      alertname: "WARN|ERROR logging"
+                      service: "ncis/ignite-tariffs-consumer-deployment"
+                      environment: "prod"
+                      description: "Notification test"
+                      startsAt: "2026-01-26T19:29:52.490787568Z"
+                      endsAt: "0001-01-01T00:00:00Z"
+                  commonLabels:
+                    alertname: "WARN|ERROR logging"
+                    ruleId: "WARN|ERROR logging"
+              resolved:
+                summary: Resolved alert
+                value:
+                  alerts:
+                    - status: "resolved"
+                      fingerprint: "326ea703b01f6100"
+                      alertname: "WARN|ERROR logging"
+                      service: "ncis/ignite-tariffs-consumer-deployment"
+                      environment: "prod"
+                      description: "Notification test"
+                      startsAt: "2026-01-26T19:29:52.490787568Z"
+                      endsAt: "2026-01-26T19:35:00.000000000Z"
+                  commonLabels:
+                    alertname: "WARN|ERROR logging"
+                    ruleId: "WARN|ERROR logging"
       responses:
         '204':
           description: Alert received and processed successfully
         '400':
           description: Invalid request - validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+              example:
+                type: "about:blank"
+                title: "Bad Request"
+                status: 400
+                detail: "Invalid request content."
+                instance: "/internal/v1/teams/a33098a8-ed37-4af0-826a-6c0dbf39ebf3/grafana-receiver"
         '401':
           description: Unauthorized - invalid or missing bearer token
         '404':
@@ -265,7 +331,97 @@ components:
 
     GrafanaAlertRequest:
       type: object
-      description: Grafana alert webhook payload (schema to be defined)
+      description: |
+        Grafana alert webhook payload produced by the Custom Payload template.
+        The template extracts only the fields needed by the monitoring service
+        from the native Grafana webhook format.
+      required:
+        - alerts
+      properties:
+        alerts:
+          type: array
+          description: List of alert instances (must contain at least one)
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/GrafanaAlert'
+        commonLabels:
+          $ref: '#/components/schemas/GrafanaCommonLabels'
+
+    GrafanaAlert:
+      type: object
+      description: Individual Grafana alert instance
+      required:
+        - status
+        - fingerprint
+        - alertname
+        - service
+        - startsAt
+      properties:
+        status:
+          type: string
+          description: Current alert state
+          enum:
+            - firing
+            - resolved
+          example: "firing"
+        fingerprint:
+          type: string
+          description: |
+            Unique hash identifying this alert instance (based on label set).
+            Generated by Grafana.
+          example: "326ea703b01f6100"
+        alertname:
+          type: string
+          description: |
+            Name of the alert rule. Extracted from Grafana's `alertname` label.
+            Used as the alert ID.
+          example: "WARN|ERROR logging"
+        service:
+          type: string
+          description: |
+            Service name. Extracted from the `service_name` custom label on the alert rule.
+          example: "ncis/ignite-tariffs-consumer-deployment"
+        environment:
+          type: string
+          description: |
+            Environment where the alert originated. Hardcoded per Grafana instance
+            via the `environment` Var in the Custom Payload template.
+          example: "prod"
+        description:
+          type: string
+          description: |
+            Alert description. Extracted from the `summary` annotation on the alert rule.
+          example: "Notification test"
+        startsAt:
+          type: string
+          format: date-time
+          description: Time when the alert started firing
+          example: "2026-01-26T19:29:52.490787568Z"
+        endsAt:
+          type: string
+          format: date-time
+          description: |
+            Time when the alert ended. Grafana sends `0001-01-01T00:00:00Z` for
+            ongoing alerts, which is converted to null server-side.
+          example: "0001-01-01T00:00:00Z"
+
+    GrafanaCommonLabels:
+      type: object
+      description: Common labels shared across all alerts in the payload
+      required:
+        - alertname
+        - ruleId
+      properties:
+        alertname:
+          type: string
+          description: Display name of the alert rule
+          example: "WARN|ERROR logging"
+        ruleId:
+          type: string
+          description: |
+            Identifier of the alert rule. In Grafana, this is set to the same
+            value as `alertname` since Grafana has no separate rule ID concept.
+          example: "WARN|ERROR logging"
 
     ProblemDetail:
       type: object
