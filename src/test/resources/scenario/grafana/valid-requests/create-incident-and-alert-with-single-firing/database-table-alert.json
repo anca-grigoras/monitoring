@@ -1,0 +1,7 @@
+{
+  "fingerprintId": "d8e9d4934258fbc4",
+  "alertId": "[TEST] NCIS-CN: FCD data interrupted",
+  "description": "FCD data flow has been interrupted",
+  "startTime": "2026-01-26T13:22:25Z",
+  "endTime": null
+}

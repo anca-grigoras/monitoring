@@ -1,0 +1,18 @@
+{
+  "alerts": [
+    {
+      "status": "resolved",
+      "fingerprint": "d8e9d4934258fbc4",
+      "alertname": "[TEST] NCIS-CN: FCD data interrupted",
+      "service": "FCD CN receiver",
+      "environment": "prod",
+      "description": "FCD data flow has been interrupted",
+      "startsAt": "2026-01-26T13:22:25Z",
+      "endsAt": "2026-01-26T13:22:25Z"
+    }
+  ],
+  "commonLabels": {
+    "alertname": "[TEST] NCIS-CN: FCD data interrupted",
+    "ruleId": "[TEST] NCIS-CN: FCD data interrupted"
+  }
+}
