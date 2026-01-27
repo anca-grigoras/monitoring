@@ -1,35 +1,43 @@
-# 24/7 Monitoring - Realtime Team Setup
+## Overzicht
 
-## Overview
+Team Backbone beheert een [monitoring-component](https://dev.azure.com/ndwnu/Backbone/_git/monitoring-backend) dat als brug fungeert tussen onze alertingtools (Datadog, Grafana) en TriOpSys voor 24/7 incidentbeheer. Wij sturen webhook-alerts naar hun endpoints, en zij verwerken en sturen deze door naar TriOpSys.
 
-Team Backbone maintains a monitoring component that acts as a bridge between our alerting tools (Datadog, Grafana) and TriOpSys for 24/7 incident management. We send webhook alerts to their endpoints, and they forward them to TriOpSys.
+Het monitoring-component staat in de repository van Backbone. Deze pagina beschrijft hoe team Realtime is geïntegreerd.
 
-The monitoring component lives in Backbone's repository. This page documents how team Realtime is integrated.
+## 1. Teamregistratie
 
-## 1. Team Registration
+Er is een team geregistreerd voor Realtime in het monitoring-component via dit endpoint:
 
-A team has been registered for Realtime in the monitoring component:
+```
+POST https://monitoring.staging.ndw.nu/monitoring-backend/v1/monitoring/teams
+```
+met de payload:
+```
+{
+    "name": "Realtime"
+}
+```
 
-| Field | Value |
-|-------|-------|
+| Veld | Waarde |
+|------|--------|
 | **Team ID** | `f7d5b810-24df-479f-92f6-48dead2428de` |
-| **Team name** | Realtime |
+| **Teamnaam** | Realtime |
 | **Token** | `psSf5cQs0hFTIUsTx81uUgyVzyO2OY0rPkZFxTU45Xo=` |
 
-The **Team ID** is used as a path parameter in all webhook URLs.
-The **Token** is used as a Bearer token for authentication.
+Het **Team ID** wordt gebruikt als path-parameter in alle webhook-URL's.
+Het **Token** wordt gebruikt als Bearer-token voor authenticatie.
 
-## 2. Service Registration
+## 2. Serviceregistratie
 
-Each service that needs 24/7 monitoring must be registered in the monitoring component. This is done via the service registration endpoint:
+Elke service die 24/7-monitoring nodig heeft, moet geregistreerd worden in het monitoring-component. Dit gaat via het serviceregistratie-endpoint:
 
 ```
 POST https://monitoring.staging.ndw.nu/monitoring-backend/v1/monitoring/teams/f7d5b810-24df-479f-92f6-48dead2428de/services
 ```
 
-Example payload:
+Voorbeeld-payload:
 
-```json
+```
 {
     "name": "FCD CN receiver",
     "monitoringServiceLevel": "24x7",
@@ -39,21 +47,21 @@ Example payload:
 }
 ```
 
-| Field | Description |
-|-------|-------------|
-| `name` | Display name of the service |
-| `monitoringServiceLevel` | Service level, e.g. `24x7` |
-| `serviceId` | Unique identifier for the service (must match the service tag/label in Datadog/Grafana) |
-| `serviceType` | Type of service, e.g. `supplier` |
-| `metadata` | Optional metadata object |
+| Veld | Beschrijving |
+|------|--------------|
+| `name` | Weergavenaam van de service |
+| `monitoringServiceLevel` | Serviceniveau, bijv. `24x7` |
+| `serviceId` | Unieke identifier voor de service (moet overeenkomen met de service-tag/label in Datadog/Grafana) |
+| `serviceType` | Type service, bijv. `supplier` |
+| `metadata` | Optioneel metadata-object |
 
-## 3. Webhook Endpoints
+## 3. Webhook-endpoints
 
-Two webhook receiver endpoints are available, one for each monitoring tool. Both require Bearer token authentication using the team token.
+Er zijn twee webhook-receiver-endpoints beschikbaar, één voor elke monitoringtool. Beide vereisen Bearer-token-authenticatie met het teamtoken.
 
 **Base URL (staging):** `https://monitoring.staging.ndw.nu/monitoring-backend`
 
-For the full API specification, see the [OpenAPI spec](../src/main/resources/openapi.yaml) in the repository.
+Voor de volledige API-specificatie, zie de [OpenAPI-spec](../src/main/resources/openapi.yaml) in de repository.
 
 ### 3.1 Datadog Webhook
 
@@ -61,12 +69,12 @@ For the full API specification, see the [OpenAPI spec](../src/main/resources/ope
 POST /internal/v1/teams/{teamId}/datadog-receiver
 ```
 
-**Full URL for Realtime:**
+**Volledige (staging) URL voor Realtime:**
 ```
 https://monitoring.staging.ndw.nu/monitoring-backend/internal/v1/teams/f7d5b810-24df-479f-92f6-48dead2428de/datadog-receiver
 ```
 
-**Webhook body template** (configure this in the Datadog webhook integration):
+**Webhook body-template** (configureer dit in de Datadog webhook-integratie):
 
 ```json
 {
@@ -77,7 +85,7 @@ https://monitoring.staging.ndw.nu/monitoring-backend/internal/v1/teams/f7d5b810-
       "alertScope": "$ALERT_SCOPE",
       "alertTitle": "$ALERT_TITLE",
       "date": "$DATE",
-      "environment": "$ENV",
+      "environment": "prod",
       "tags": "$TAGS"
     }
   ],
@@ -88,21 +96,21 @@ https://monitoring.staging.ndw.nu/monitoring-backend/internal/v1/teams/f7d5b810-
 }
 ```
 
-> **Note:** The `environment` field uses the `$ENV` variable, but Datadog does not support per-monitor environment variables. This means the environment value is determined by how the webhook is configured, effectively making it hardcoded per webhook instance.
+> **Let op:** De `environment` is hardcoded omdat er geen per-monitor omgevingsvariabelen beschikbaar zijn in Datadog. Dit is een mogelijke verbetering voor de toekomst.
 
-**How the service is identified:** The service name is extracted server-side from the `service:` tag in the `$TAGS` field (e.g., `service:FCD CN receiver`). Make sure the Datadog monitor includes a `service` tag that matches the `serviceId` registered in step 2.
+**Hoe de service wordt geïdentificeerd:** De servicenaam wordt server-side geëxtraheerd uit de `service:`-tag in het `$TAGS`-veld (bijv. `service:FCD CN receiver`). Zorg ervoor dat de Datadog-monitor een `service`-tag bevat die overeenkomt met de `serviceId` die in stap 2 is geregistreerd.
 
-**Possible `alertTransition` values:**
+**Mogelijke `alertTransition`-waarden:**
 
-| Value | Meaning |
-|-------|---------|
-| `Triggered` | Alert has been triggered |
-| `Warn` | Alert is in warning state |
-| `Recovered` | Alert has recovered |
-| `No Data` | No data received |
-| `Re-Triggered` | Alert has been re-triggered |
+| Waarde | Betekenis |
+|--------|-----------|
+| `Triggered` | Alert is getriggerd |
+| `Warn` | Alert is in waarschuwingsstatus |
+| `Recovered` | Alert is hersteld |
+| `No Data` | Geen data ontvangen |
+| `Re-Triggered` | Alert is opnieuw getriggerd |
 
-**Example resolved payload:**
+**Voorbeeld recovered-payload:**
 
 ```json
 {
@@ -111,14 +119,14 @@ https://monitoring.staging.ndw.nu/monitoring-backend/internal/v1/teams/f7d5b810-
       "alertTransition": "Recovered",
       "alertId": "d8e9d4934258fbc4",
       "alertScope": "",
-      "alertTitle": "[TEST] NCIS-CN: FCD data interrupted",
+      "alertTitle": "NCIS-CN: FCD data interrupted",
       "date": 1769433745000,
       "environment": "prod",
       "tags": "fd,monitor,ncis-cn,priority:p1,service:FCD CN receiver,team:dev"
     }
   ],
   "commonLabels": {
-    "alertname": "[TEST] NCIS-CN: FCD data interrupted",
+    "alertname": "NCIS-CN: FCD data interrupted",
     "ruleId": "d8e9d4934258fbc4"
   }
 }
@@ -130,14 +138,14 @@ https://monitoring.staging.ndw.nu/monitoring-backend/internal/v1/teams/f7d5b810-
 POST /internal/v1/teams/{teamId}/grafana-receiver
 ```
 
-**Full URL for Realtime:**
+**Volledige (staging) URL voor Realtime:**
 ```
 https://monitoring.staging.ndw.nu/monitoring-backend/internal/v1/teams/f7d5b810-24df-479f-92f6-48dead2428de/grafana-receiver
 ```
 
-This endpoint expects a custom payload produced by a Grafana webhook contact point configured with a **Custom Payload template** (requires Grafana 12+).
+Dit endpoint verwacht een custom payload die wordt geproduceerd door een Grafana webhook-contactpunt dat is geconfigureerd met een **Custom Payload-template**.
 
-**Custom Payload template** (configure this in the Grafana webhook contact point):
+**Custom Payload-template** (configureer dit in het Grafana webhook-contactpunt):
 
 ```
 {{ $alerts := coll.Slice }}
@@ -147,24 +155,24 @@ This endpoint expects a custom payload produced by a Grafana webhook contact poi
 {{ coll.Dict "alerts" $alerts "commonLabels" (coll.Dict "alertname" (index .CommonLabels "alertname") "ruleId" (index .CommonLabels "alertname")) | data.ToJSON }}
 ```
 
-**Vars** (configured per Grafana webhook contact point):
-- `environment` — set to `prod` for production, `staging` for staging, etc.
+**Vars** (geconfigureerd per Grafana webhook-contactpunt):
+- `environment` — stel in op `prod` voor productie, `staging` voor staging, etc.
 
-**Required Grafana alert rule labels:**
-- `alertname` — standard Grafana label (always present), used as alert ID
-- `service_name` — must be added as a custom label on the alert rule, matching the `serviceId` registered in step 2
+**Vereiste Grafana alert rule-labels:**
+- `alertname` — standaard Grafana-label (altijd aanwezig), wordt gebruikt als alert-ID
+- `service_name` — moet als custom label worden toegevoegd aan de alert rule, overeenkomend met de `serviceId` die in stap 2 is geregistreerd. De naam mag geen slashes bevatten.
 
-**Optional annotations:**
-- `summary` — used as the alert description
+**Optionele annotaties:**
+- `summary` — wordt gebruikt als alertbeschrijving
 
-**Possible `status` values:**
+**Mogelijke `status`-waarden:**
 
-| Value | Meaning |
-|-------|---------|
-| `firing` | Alert is currently firing |
-| `resolved` | Alert has been resolved |
+| Waarde | Betekenis |
+|--------|-----------|
+| `firing` | Alert is actief |
+| `resolved` | Alert is opgelost |
 
-**Example firing payload:**
+**Voorbeeld firing-payload:**
 
 ```json
 {
@@ -173,7 +181,7 @@ This endpoint expects a custom payload produced by a Grafana webhook contact poi
       "status": "firing",
       "fingerprint": "326ea703b01f6100",
       "alertname": "WARN|ERROR logging",
-      "service": "ncis/ignite-tariffs-consumer-deployment",
+      "service": "ignite-tariffs-consumer-deployment",
       "environment": "prod",
       "description": "Notification test",
       "startsAt": "2026-01-26T19:29:52.490787568Z",
@@ -186,20 +194,3 @@ This endpoint expects a custom payload produced by a Grafana webhook contact poi
   }
 }
 ```
-
-## 4. Authentication
-
-All requests require a `Authorization: Bearer <token>` header. For team Realtime, use:
-
-```
-Authorization: Bearer psSf5cQs0hFTIUsTx81uUgyVzyO2OY0rPkZFxTU45Xo=
-```
-
-## 5. Response Codes
-
-| Code | Meaning |
-|------|---------|
-| `204` | Alert received and processed successfully |
-| `400` | Invalid request (validation error) |
-| `401` | Unauthorized (invalid or missing token) |
-| `404` | Service not found (service not registered for this team) |
